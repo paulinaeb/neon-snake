@@ -17,13 +17,21 @@ const defaultProfile = (): PlayerProfile => ({
   playerMuted: false
 });
 
+// Key/value store with the localStorage get/set contract, e.g. window.localStorage or GameInterface.storage.
+export type KeyValueStore = {
+  getItem(key: string): unknown;
+  setItem(key: string, value: string): void;
+};
+
 export class LocalGameStorage implements GameStorage {
   private readonly storageKey = 'neon-snake:profile';
 
+  constructor(private readonly store: KeyValueStore = window.localStorage) {}
+
   loadProfile(): PlayerProfile {
     try {
-      const storedProfile = window.localStorage.getItem(this.storageKey);
-      if (!storedProfile) return defaultProfile();
+      const storedProfile = this.store.getItem(this.storageKey);
+      if (typeof storedProfile !== 'string' || !storedProfile) return defaultProfile();
 
       const value = JSON.parse(storedProfile) as Partial<PlayerProfile>;
       return {
@@ -39,7 +47,7 @@ export class LocalGameStorage implements GameStorage {
 
   saveProfile(profile: PlayerProfile): void {
     try {
-      window.localStorage.setItem(this.storageKey, JSON.stringify(profile));
+      this.store.setItem(this.storageKey, JSON.stringify(profile));
     } catch {
       // The game remains playable when browser storage is unavailable.
     }

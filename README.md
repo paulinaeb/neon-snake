@@ -2,7 +2,7 @@
 
 A compact browser game built with Phaser 3, TypeScript, Vite, and a DOM-based interface.
 
-This repository is intentionally a small game only. It does not contain the Famobi SDK, analytics, a backend, or a dashboard.
+The game is integrated with the [Famobi GameInterface](https://docs.famobi.com).
 
 ## Gameplay
 
@@ -33,13 +33,28 @@ pnpm build
 pnpm preview
 ```
 
+## Famobi testing
+
+The SDK is loaded from `https://api.games.famobi.com/init.js`; on `localhost` it injects the local tester, which logs every GameInterface call to the console and shows a test menu (pause, mute, restart, next level, go to level, home, quit) once the game is ready.
+
+Useful URL parameters:
+
+- `?holdInit=1` holds SDK initialization; no game script loads until START is clicked.
+- `?showLoadingOverlay=1` shows a loading overlay that disappears on `gameReady`.
+- `?eventDelay=1000` delays the resolution of lifecycle promises to verify the game waits for them.
+- `?gameId=<id>` switches the storage save slot.
+- `?score=0`, `?progress=0`, `?pause=0`, `?audio=0`, `?copyright=0`, `?visibilitychange=0` turn off the corresponding `hasFeature` flags.
+
+Locally, `getCopyrightLogoURL()` points to `gameInterfaceAssets/`, which only exists on Famobi hosting; the logo is hidden when it cannot be loaded.
+
 ## Project structure
 
 ```text
 src/
 ├── application/
 │   ├── GameController.ts
-│   └── gameEvents.ts
+│   ├── gameEvents.ts
+│   └── sessionLifecycle.ts
 ├── core/
 │   ├── audio/
 │   │   └── GameAudio.ts
@@ -54,6 +69,11 @@ src/
 │   │   └── SnakeScene.ts
 │   ├── snakeGame.ts
 │   └── types.ts
+├── platform/
+│   └── famobi/
+│       ├── GameInterface.ts
+│       └── famobiIntegration.ts
+├── boot.ts
 ├── main.ts
 └── style.css
 ```
