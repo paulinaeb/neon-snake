@@ -5,15 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "pnpm --filter neon-snake-analytics-server dev",
+    "emulators": "pnpm --filter neon-snake-analytics-server emulators",
+    "dev:all": "concurrently --kill-others --names emulator,server,game --prefix-colors yellow,cyan,magenta \"pnpm emulators\" \"pnpm dev:server\" \"pnpm dev\"",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
-    "test": "vitest run"
+    "check:server": "pnpm --filter neon-snake-analytics-server check",
+    "test": "vitest run",
+    "test:server": "pnpm --filter neon-snake-analytics-server test",
+    "test:all": "pnpm test && pnpm test:server"
   },
   "dependencies": {
     "phaser": "3.90.0"
   },
   "devDependencies": {
+    "concurrently": "^10.0.5",
     "typescript": "^7.0.2",
     "vite": "^8.1.5",
     "vitest": "^5.0.3"

@@ -1,0 +1,32 @@
+{
+  "name": "neon-snake-analytics-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js backend that validates gameplay analytics and stores them in the Firestore Emulator.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "emulators": "firebase emulators:start --only firestore --project demo-neon-snake",
+    "check": "tsc --noEmit",
+    "test": "firebase emulators:exec --config firebase.test.json --only firestore --project demo-neon-snake-test \"vitest run\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "firebase-admin": "^14.5.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "@types/supertest": "^7.2.1",
+    "firebase-tools": "^15.32.1",
+    "supertest": "^7.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  }
+}

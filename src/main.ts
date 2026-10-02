@@ -4,7 +4,14 @@ import Phaser from 'phaser';
 
 import { Analytics } from './analytics/Analytics';
 import { connectGameplayAnalytics } from './analytics/gameplayAnalytics';
-import { MemoryTransport, noopTransport, type AnalyticsTransport } from './analytics/transports';
+import {
+  ANALYTICS_ENDPOINT,
+  combineTransports,
+  HttpTransport,
+  MemoryTransport,
+  noopTransport,
+  type AnalyticsTransport
+} from './analytics/transports';
 import { GameController } from './application/GameController';
 import { LocalGameStorage } from './core/storage/GameStorage';
 import { SnakeScene } from './game/scenes/SnakeScene';
@@ -53,18 +60,21 @@ const controller = new GameController(
 controller.setPlayerPauseEnabled(features.pause);
 connectFamobi(famobi, controller, features);
 
-// Gameplay analytics, independent of the Famobi SDK. Development builds keep events in memory for
-// inspection; the transport is replaced by the analytics backend later.
-let analyticsTransport: AnalyticsTransport = noopTransport;
+// Gameplay analytics, independent of the Famobi SDK. Batches are posted to the analytics backend
+// (proxied by Vite during development). Production builds only post when VITE_ANALYTICS_ENDPOINT is
+// set, because the hosted game has no backend. Development builds also keep events in memory.
+const analyticsEndpoint: string =
+  import.meta.env.VITE_ANALYTICS_ENDPOINT || (import.meta.env.DEV ? ANALYTICS_ENDPOINT : '');
+const analyticsTransports: AnalyticsTransport[] = analyticsEndpoint ? [new HttpTransport(analyticsEndpoint)] : [];
 if (import.meta.env.DEV) {
   const memoryTransport = new MemoryTransport((events) => events.forEach((event) => console.debug('[analytics]', event)));
   window.__neonSnakeAnalytics = memoryTransport;
-  analyticsTransport = memoryTransport;
+  analyticsTransports.push(memoryTransport);
 }
 connectGameplayAnalytics(
   controller.events,
-  new Analytics(analyticsTransport, (error) => {
-    if (import.meta.env.DEV) console.warn('[analytics] delivery failed', error);
+  new Analytics(analyticsTransports.length ? combineTransports(...analyticsTransports) : noopTransport, (error) => {
+    if (import.meta.env.DEV) console.warn('[analytics] delivery failed:', error instanceof Error ? error.message : error);
   })
 );
 const snakeScene = new SnakeScene(controller);
