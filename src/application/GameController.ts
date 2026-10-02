@@ -4,13 +4,19 @@ import type { GameStorage, PlayerProfile } from '../core/storage/GameStorage';
 import { LEVELS } from '../game/levels';
 import { SnakeGame } from '../game/snakeGame';
 import type { Direction, GameListener, GameSnapshot, PauseSource } from '../game/types';
-import type { GameEventMap, RunEndReason } from './gameEvents';
-import { immediateLifecycle, type SessionLifecycle, type SessionMetrics } from './sessionLifecycle';
+import type { GameEventMap, RunEndReason, RunSummary } from './gameEvents';
+import { immediateLifecycle, type SessionLifecycle } from './sessionLifecycle';
 
 const isActive = (snapshot: GameSnapshot): boolean => snapshot.phase === 'playing' || snapshot.phase === 'paused';
 
 const beginsRun = (previous: GameSnapshot, next: GameSnapshot): boolean =>
   next.phase === 'playing' && ['menu', 'level-complete', 'game-over', 'finished'].includes(previous.phase);
+
+// Random, per-attempt identifier; never persisted and not tied to the player.
+const createRunId = (): string => {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('');
+};
 
 const terminalReason = (snapshot: GameSnapshot): RunEndReason | null => {
   if (snapshot.phase === 'level-complete' || snapshot.phase === 'finished') return 'complete';
@@ -25,7 +31,9 @@ export class GameController {
   private readonly audio: GameAudio;
   private profile: PlayerProfile;
   private previousSnapshot: GameSnapshot;
-  private runStartedAt: number | null = null;
+  private run: { id: string; startedAt: number } | null = null;
+  // Summary captured when the player leaves a run, reused when the run actually ends.
+  private quitSummary: RunSummary | null = null;
   private playerPauseActive = false;
   private systemPauseActive = false;
   private systemMuted = false;
@@ -186,11 +194,13 @@ export class GameController {
     const previous = this.previousSnapshot;
     const now = Date.now();
 
-    if (beginsRun(previous, snapshot)) {
-      this.runStartedAt = now;
+    const runBegins = beginsRun(previous, snapshot);
+    if (runBegins) {
+      this.run = { id: createRunId(), startedAt: now };
       this.profile = { ...this.profile, totalRuns: this.profile.totalRuns + 1 };
       this.persistProfile();
       this.events.emit('runStarted', {
+        runId: this.run.id,
         level: snapshot.level,
         runNumber: this.profile.totalRuns,
         occurredAt: now
@@ -216,25 +226,29 @@ export class GameController {
       });
     }
 
-    const endReason = terminalReason(snapshot);
-    if (endReason && isActive(previous) && this.runStartedAt !== null) {
-      const durationMs = Math.max(0, now - this.runStartedAt);
-      this.events.emit('runEnded', {
-        level: previous.level,
+    const scoreOrProgressChanged = snapshot.score !== previous.score || snapshot.progress !== previous.progress;
+    if (this.run && !runBegins && scoreOrProgressChanged) {
+      this.events.emit('runUpdated', {
+        runId: this.run.id,
+        level: snapshot.level,
         score: snapshot.score,
-        progress: endReason === 'complete' ? 1 : previous.progress,
-        reason: endReason,
-        durationMs,
+        progress: snapshot.progress,
         occurredAt: now
       });
-      this.runStartedAt = null;
+    }
+
+    const endReason = terminalReason(snapshot);
+    if (endReason && isActive(previous) && this.run) {
+      const summary = this.quitSummary ?? this.summarizeRun(previous, snapshot, endReason, now);
+      this.quitSummary = null;
+      this.run = null;
+      this.events.emit('runEnded', summary);
 
       // Quits are reported by leaveActiveRun() before the run is left.
       if (endReason !== 'quit') {
-        const metrics = this.runMetrics(snapshot, durationMs);
         const finished = snapshot.phase === 'finished';
         this.enqueue(async () => {
-          await this.lifecycle.gameEnd(endReason, metrics);
+          await this.lifecycle.gameEnd(summary);
           if (finished) await this.lifecycle.gameFinished();
         });
       }
@@ -316,25 +330,37 @@ export class GameController {
 
   private async leaveActiveRun(): Promise<void> {
     const snapshot = this.simulation.getSnapshot();
-    if (!isActive(snapshot) || this.runStartedAt === null) return;
-    // Gameplay is held until the platform has acknowledged the quit.
+    if (!isActive(snapshot) || !this.run) return;
+    // The run ends when the player leaves it; gameplay is held until the platform has acknowledged the quit.
+    const summary = this.summarizeRun(snapshot, snapshot, 'quit', Date.now());
     this.leavingRun = true;
     try {
-      await this.lifecycle.gameEnd('quit', this.runMetrics(snapshot, Math.max(0, Date.now() - this.runStartedAt)));
+      await this.lifecycle.gameEnd(summary);
     } finally {
       this.leavingRun = false;
     }
     this.playerPauseActive = false;
+    this.quitSummary = summary;
     this.simulation.quitToMenu();
+    this.quitSummary = null;
   }
 
-  private runMetrics(snapshot: GameSnapshot, durationMs: number): SessionMetrics {
+  // `previous` is the last active snapshot of the run, `snapshot` the one that ends it.
+  private summarizeRun(
+    previous: GameSnapshot,
+    snapshot: GameSnapshot,
+    reason: RunEndReason,
+    endedAt: number
+  ): RunSummary {
+    const run = this.run!;
     return {
-      level: snapshot.level,
+      runId: run.id,
+      level: previous.level,
+      reason,
       score: snapshot.score,
-      fruitEaten: snapshot.fruitEaten,
-      target: snapshot.target,
-      durationMs
+      progress: reason === 'complete' ? 1 : previous.progress,
+      durationMs: Math.max(0, endedAt - run.startedAt),
+      occurredAt: endedAt
     };
   }
 

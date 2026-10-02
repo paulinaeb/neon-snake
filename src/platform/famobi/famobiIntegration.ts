@@ -23,13 +23,20 @@ export const readFamobiFeatures = (sdk: FamobiGameInterface): FamobiFeatures => 
   visibilitychange: sdk.hasFeature('visibilitychange')
 });
 
+// Level progress (0–1) as the integer percentage reported to Famobi.
+const toPercent = (progress: number): number => Math.round(Math.min(1, Math.max(0, progress)) * 100);
+
 // Lifecycle events: https://docs.famobi.com/game
 export const createFamobiLifecycle = (sdk: FamobiGameInterface): SessionLifecycle => {
   let finishedReported = false;
 
   return {
     gameStart: (level) => sdk.gameStart(level),
-    gameEnd: (reason, metrics) => sdk.gameEnd(reason, { metrics }),
+    // Balancing metrics (https://docs.famobi.com/analytics), from the same run summary the game's analytics use.
+    gameEnd: (run) =>
+      sdk.gameEnd(run.reason, {
+        metrics: { duration: run.durationMs, score: run.score, progress: toPercent(run.progress), level: run.level }
+      }),
     gameFinished: async () => {
       // gameFinished marks full completion and may only be reported once per session.
       if (finishedReported) return;
@@ -56,7 +63,7 @@ export const connectFamobi = (
   controller.events.on('scoreChanged', ({ score, level }) => sdk.sendScore(score, { level }));
   let reportedProgress: number | null = null;
   controller.events.on('progressChanged', ({ progress }) => {
-    const percent = Math.round(Math.min(1, Math.max(0, progress)) * 100);
+    const percent = toPercent(progress);
     if (percent === reportedProgress) return;
     reportedProgress = percent;
     sdk.sendProgress(percent);
