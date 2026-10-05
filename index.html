@@ -9,11 +9,16 @@
       content="Neon Snake, a compact browser game built with Phaser and TypeScript."
     />
     <title>Neon Snake</title>
+    <!-- The game stylesheet is loaded after GameInterface.init() resolves; keep the shell hidden until src/main.ts reveals it. -->
+    <style>
+      html { background: #080d19; }
+      .game-shell[data-loading] { visibility: hidden; }
+    </style>
     <script src="https://api.games.famobi.com/init.js"></script>
     <script type="module" src="/src/boot.ts"></script>
   </head>
   <body>
-    <main class="game-shell">
+    <main class="game-shell" data-loading>
       <header class="game-header">
         <a class="brand" href="./" aria-label="Neon Snake home">
           <span class="brand-mark" aria-hidden="true"></span>

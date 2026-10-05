@@ -295,3 +295,6 @@ window.addEventListener('beforeunload', () => {
   controller.dispose();
   phaserGame.destroy(true);
 });
+
+// The stylesheet is applied and the UI is wired up, so the shell hidden by index.html can be shown.
+requiredElement<HTMLElement>('.game-shell').removeAttribute('data-loading');
