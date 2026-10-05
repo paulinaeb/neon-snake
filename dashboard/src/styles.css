@@ -1,0 +1,809 @@
+/* Visual language borrowed from the game (src/style.css, SnakeScene palette): navy board, slate grid,
+   heavy rounded type, uppercase HUD labels. Outcome colors are semantic and fixed everywhere:
+   complete = snake green, fail = fruit pink (a crash), quit = obstacle slate (neutral). */
+:root {
+  color-scheme: dark;
+  color: #eef5ff;
+  background: #080d19;
+  font-family: Inter, ui-rounded, "SF Pro Rounded", "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  --bg: #080d19;
+  --surface: #10182c;
+  --surface-raised: #18233c;
+  --grid: rgba(39, 53, 82, 0.5);
+  --rule: rgba(177, 201, 238, 0.14);
+  --text: #eef5ff;
+  --text-secondary: #afbdd4;
+  --text-muted: #91a0bb;
+  --ink-on-fill: #0b1222;
+  --brand: #99f725;
+
+  --complete: #8ee024;
+  --fail: #f2506c;
+  --quit: #6f7fa6;
+  --meter: #b8c6dc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  position: relative;
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(60, 91, 159, 0.16), transparent 36rem),
+    radial-gradient(circle at 92% 88%, rgba(91, 168, 31, 0.07), transparent 30rem),
+    var(--bg);
+}
+
+/* The game board's grid, fading out under the masthead. */
+body::before {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 320px;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
+  content: "";
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent);
+  pointer-events: none;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+code {
+  padding: 1px 4px;
+  color: var(--text-secondary);
+  background: rgba(177, 201, 238, 0.08);
+  border-radius: 4px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ul,
+ol {
+  margin: 0;
+}
+
+.page {
+  width: min(100% - 32px, 1160px);
+  margin: 0 auto;
+  padding: 40px 0 48px;
+}
+
+.label,
+.stat-strip dt,
+.detail-table thead th {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 3px;
+}
+
+[data-outcome="complete"] {
+  background: var(--complete);
+}
+
+[data-outcome="fail"] {
+  background: var(--fail);
+}
+
+[data-outcome="quit"] {
+  background: var(--quit);
+}
+
+/* Masthead */
+
+.masthead {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.brand {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* The game's logo: a snake bending round. */
+.brand-mark {
+  width: 22px;
+  height: 14px;
+  border: 4px solid var(--brand);
+  border-right-width: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+.masthead h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.masthead__source {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.source {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.source__dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--text-muted);
+  border-radius: 50%;
+}
+
+.source[data-status="ok"] .source__dot {
+  background: var(--complete);
+}
+
+.source[data-status="error"] .source__dot {
+  background: var(--fail);
+}
+
+.button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 16px;
+  color: #dbe6f7;
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.button--primary {
+  color: #17200c;
+  background: var(--brand);
+  border-color: transparent;
+}
+
+.button--primary:hover:not(:disabled) {
+  background: #aaff3f;
+}
+
+/* Content */
+
+.content {
+  transition: opacity 160ms ease;
+}
+
+/* A refresh keeps the previous numbers on screen, dimmed, instead of flashing a loader. */
+.content[data-refreshing="true"] {
+  opacity: 0.55;
+}
+
+/* Overview */
+
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 40px 64px;
+  padding: 52px 0 44px;
+}
+
+.overview__headline {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  margin: 14px 0 12px;
+  font-size: clamp(80px, 11vw, 136px);
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 0.85;
+}
+
+.lede {
+  max-width: 24ch;
+  color: var(--text-secondary);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.lede strong {
+  color: var(--text);
+}
+
+.overview__outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 2px;
+}
+
+.outcome-legend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.outcome-legend__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.outcome-legend__label {
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.outcome-legend__value,
+.outcome-legend__description {
+  grid-column: 2;
+}
+
+.outcome-legend__value {
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.outcome-legend__value strong {
+  color: var(--text);
+  font-size: 26px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.outcome-legend__description {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.stat-strip {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-top: 22px;
+  border-top: 1px solid var(--rule);
+}
+
+.stat-strip > div {
+  padding: 0 20px;
+  border-left: 1px solid var(--rule);
+}
+
+.stat-strip > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.stat-strip dd {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.stat-strip small {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Outcome bar: thin 100% bar, 2px gaps between segments, labels only where they fit. */
+
+.outcome-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+
+.outcome-bar--large {
+  height: 16px;
+}
+
+.outcome-bar--compact {
+  height: 18px;
+}
+
+.outcome-bar__segment {
+  position: relative;
+  display: flex;
+  min-width: 3px;
+  flex-basis: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.outcome-bar__segment:hover {
+  filter: brightness(1.12);
+}
+
+.outcome-bar__value {
+  color: var(--ink-on-fill);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.outcome-bar--compact .outcome-bar__value {
+  font-size: 11px;
+}
+
+/* Hover tooltip with the exact count; every value is also in the legend or the level table. */
+.outcome-bar__segment:hover::after {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 2;
+  padding: 6px 9px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  content: attr(data-tip);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.outcome-bar__segment:first-child:not(:last-child):hover::after {
+  left: 0;
+  transform: none;
+}
+
+.outcome-bar__segment:last-child:not(:first-child):hover::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+/* Sections: side heading on the left, evidence on the right. */
+
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 28px 64px;
+  padding: 44px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.section__head {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.section__head h2 {
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.section__note {
+  color: var(--text-secondary);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+
+.insight {
+  margin-top: 8px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(238, 245, 255, 0.4);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Level ladder */
+
+.ladder__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: flex-end;
+  padding-bottom: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ladder__legend > span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+
+.ladder__rows {
+  padding: 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+}
+
+.ladder__row {
+  display: grid;
+  grid-template-columns: 8.5rem 6.5rem minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.ladder__level,
+.ladder__rate {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ladder__level strong {
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.ladder__level span,
+.ladder__rate span {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ladder__level em {
+  font-style: normal;
+}
+
+.ladder__rate strong {
+  font-size: 30px;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.ladder__rate span {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Level detail table */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.detail-table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.detail-table thead th {
+  padding-top: 0;
+  padding-bottom: 12px;
+  font-size: 10.5px;
+}
+
+.detail-table tbody th {
+  font-weight: 800;
+}
+
+.detail-table th:first-child,
+.detail-table td:first-child {
+  padding-left: 0;
+}
+
+.detail-table th:last-child,
+.detail-table td:last-child {
+  padding-right: 0;
+}
+
+.detail-table .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.detail-table td.num {
+  color: var(--text-secondary);
+}
+
+.progress-col {
+  padding-right: 16px !important;
+}
+
+/* Echoes the game's fruit bar. Neutral fill: green is reserved for "completed". */
+.fruit-meter {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fruit-meter__track {
+  width: 96px;
+  height: 8px;
+  overflow: hidden;
+  background: #0a1020;
+  border: 1px solid var(--rule);
+  border-radius: 99px;
+}
+
+.fruit-meter__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--meter);
+  border-radius: inherit;
+  transform-origin: left center;
+}
+
+.fruit-meter__value {
+  min-width: 3.5ch;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.section__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.footnote {
+  max-width: 72ch;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Loading, unavailable and empty states */
+
+.state-panel {
+  display: flex;
+  max-width: 600px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 72px 0 80px;
+}
+
+.state-panel h2 {
+  font-size: 28px;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+}
+
+.state-panel p {
+  color: var(--text-secondary);
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+.state-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.snake-glyph {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.snake-glyph > span {
+  width: 14px;
+  height: 14px;
+  background: #46d68c;
+  border-radius: 4px;
+}
+
+.snake-glyph > span:nth-child(3) {
+  background: #6ee35b;
+}
+
+.snake-glyph > span:nth-child(4) {
+  background: var(--brand);
+}
+
+.snake-glyph > .snake-glyph__fruit {
+  width: 12px;
+  height: 12px;
+  margin-left: 20px;
+  background: #ff5975;
+  border-radius: 50%;
+}
+
+.snake-glyph--moving > span:not(.snake-glyph__fruit) {
+  animation: crawl 1.2s ease-in-out infinite;
+}
+
+.snake-glyph--moving > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.snake-glyph--moving > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.snake-glyph--moving > span:nth-child(4) {
+  animation-delay: 0.45s;
+}
+
+@keyframes crawl {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snake-glyph--moving > span:not(.snake-glyph__fruit) {
+    animation: none;
+  }
+}
+
+.page-footer {
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* Tablet: sections stack, heading above evidence. */
+@media (max-width: 1100px) {
+  .overview,
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview {
+    gap: 36px;
+  }
+
+  .section__head {
+    max-width: 640px;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .page {
+    padding-top: 24px;
+  }
+
+  .masthead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .masthead__source {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .overview {
+    padding: 36px 0 32px;
+  }
+
+  .outcome-legend {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .stat-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 0;
+  }
+
+  .stat-strip > div:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .ladder__legend {
+    justify-content: flex-start;
+  }
+
+  .ladder__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 16px;
+  }
+
+  .ladder__rate {
+    align-items: flex-end;
+  }
+
+  .ladder__row .outcome-bar {
+    grid-column: 1 / -1;
+  }
+
+  .fruit-meter__track {
+    width: 80px;
+  }
+}

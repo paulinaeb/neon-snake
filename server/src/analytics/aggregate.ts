@@ -20,6 +20,9 @@ export type PlayMetrics = {
   completionRate: number | null;
   averageScore: number | null;
   averageProgress: number | null;
+  // Average progress of plays that were not completed (fail or quit): how far players get before a
+  // run ends early. null when every play was completed.
+  averageUnfinishedProgress: number | null;
   averageDurationMs: number | null;
 };
 
@@ -32,6 +35,7 @@ export type LevelMetrics = {
   completionRate: number | null;
   averageScore: number | null;
   averageProgress: number | null;
+  averageUnfinishedProgress: number | null;
   averageDurationMs: number | null;
 };
 
@@ -60,6 +64,10 @@ const summarize = (plays: PlayOutcome[]): PlayMetrics => {
     completionRate: plays.length === 0 ? null : completedPlays / plays.length,
     averageScore: average(plays, (play) => play.score),
     averageProgress: average(plays, (play) => play.progress),
+    averageUnfinishedProgress: average(
+      plays.filter((play) => play.result !== 'complete'),
+      (play) => play.progress
+    ),
     averageDurationMs: average(plays, (play) => play.durationMs)
   };
 };
@@ -85,6 +93,7 @@ export const computeLevels = (outcomes: PlayOutcome[]): LevelMetrics[] => {
         completionRate: metrics.completionRate,
         averageScore: metrics.averageScore,
         averageProgress: metrics.averageProgress,
+        averageUnfinishedProgress: metrics.averageUnfinishedProgress,
         averageDurationMs: metrics.averageDurationMs
       };
     });

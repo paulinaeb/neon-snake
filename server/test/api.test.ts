@@ -165,6 +165,7 @@ describe('read API', () => {
       completionRate: null,
       averageScore: null,
       averageProgress: null,
+      averageUnfinishedProgress: null,
       averageDurationMs: null
     });
     expect((await request(app).get('/api/analytics/levels')).body).toEqual([]);

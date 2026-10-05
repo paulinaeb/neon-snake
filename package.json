@@ -6,15 +6,19 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "pnpm --filter neon-snake-analytics-server dev",
+    "dev:dashboard": "pnpm --filter neon-snake-dashboard dev",
     "emulators": "pnpm --filter neon-snake-analytics-server emulators",
-    "dev:all": "concurrently --kill-others --names emulator,server,game --prefix-colors yellow,cyan,magenta \"pnpm emulators\" \"pnpm dev:server\" \"pnpm dev\"",
+    "dev:all": "concurrently --kill-others --names emulator,server,game,dashboard --prefix-colors yellow,cyan,magenta,green \"pnpm emulators\" \"pnpm dev:server\" \"pnpm dev\" \"pnpm dev:dashboard\"",
     "build": "tsc --noEmit && vite build",
+    "build:dashboard": "pnpm --filter neon-snake-dashboard build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "check:server": "pnpm --filter neon-snake-analytics-server check",
+    "check:dashboard": "pnpm --filter neon-snake-dashboard check",
     "test": "vitest run",
     "test:server": "pnpm --filter neon-snake-analytics-server test",
-    "test:all": "pnpm test && pnpm test:server"
+    "test:dashboard": "pnpm --filter neon-snake-dashboard test",
+    "test:all": "pnpm test && pnpm test:dashboard && pnpm test:server"
   },
   "dependencies": {
     "phaser": "3.90.0"

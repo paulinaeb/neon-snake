@@ -31,6 +31,7 @@ describe('aggregation', () => {
       completionRate: 0.5,
       averageScore: 60,
       averageProgress: expect.closeTo(0.65, 10),
+      averageUnfinishedProgress: expect.closeTo(0.3, 10),
       averageDurationMs: 16000
     });
   });
@@ -46,6 +47,7 @@ describe('aggregation', () => {
         completionRate: 0.5,
         averageScore: 30,
         averageProgress: 0.6,
+        averageUnfinishedProgress: 0.2,
         averageDurationMs: 12500
       },
       {
@@ -57,6 +59,7 @@ describe('aggregation', () => {
         completionRate: 0.5,
         averageScore: 90,
         averageProgress: 0.7,
+        averageUnfinishedProgress: 0.4,
         averageDurationMs: 19500
       }
     ]);

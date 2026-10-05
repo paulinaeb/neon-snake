@@ -20,7 +20,7 @@ Requirements: Node.js 22 or newer, pnpm, and Java 11+ for the Firestore Emulator
 
 ```bash
 pnpm install
-pnpm dev:all     # Firestore Emulator + analytics backend + game
+pnpm dev:all     # Firestore Emulator + analytics backend + game + dashboard
 ```
 
 | Command | Starts | URL |
@@ -28,6 +28,7 @@ pnpm dev:all     # Firestore Emulator + analytics backend + game
 | `pnpm emulators` | Firestore Emulator and Emulator UI | Firestore `127.0.0.1:8080`, UI http://127.0.0.1:4000 |
 | `pnpm dev:server` | Analytics backend (waits for the emulator) | http://localhost:3001 |
 | `pnpm dev` | Game (Vite) | http://localhost:5173 |
+| `pnpm dev:dashboard` | Analytics dashboard (React) | http://localhost:5174 |
 
 The game works on its own with `pnpm dev`; without the backend, analytics delivery fails quietly (one console warning per batch).
 
@@ -36,10 +37,13 @@ The game works on its own with `pnpm dev`; without the backend, analytics delive
 ```bash
 pnpm check          # game type check
 pnpm check:server   # backend type check
+pnpm check:dashboard
 pnpm test           # game, analytics and HTTP transport tests
+pnpm test:dashboard # dashboard tests (jsdom)
 pnpm test:server    # backend tests, on a throwaway Firestore Emulator
-pnpm test:all       # both
-pnpm build
+pnpm test:all       # all three
+pnpm build          # game production build (deployed to Pages)
+pnpm build:dashboard
 pnpm preview
 ```
 
@@ -100,9 +104,11 @@ GET /api/analytics/overview|levels <── aggregate.ts <── gameplay_end eve
 | Method & path | Purpose | Responses |
 | --- | --- | --- |
 | `POST /api/analytics/events` | Store a batch `{ "events": [...] }` (1–100 events) | `201 { "accepted": n }`; `400 invalid_events` / `invalid_json`; `413` body > 64 kB; `415` not JSON |
-| `GET /api/analytics/overview` | Totals over all finished plays | `200 { totalPlays, completedPlays, failedPlays, quitPlays, completionRate, averageScore, averageProgress, averageDurationMs }` |
-| `GET /api/analytics/levels` | The same metrics per level, ordered by level | `200 [{ level, plays, completed, failed, quit, completionRate, averageScore, averageProgress, averageDurationMs }]` |
+| `GET /api/analytics/overview` | Totals over all finished plays | `200 { totalPlays, completedPlays, failedPlays, quitPlays, completionRate, averageScore, averageProgress, averageUnfinishedProgress, averageDurationMs }` |
+| `GET /api/analytics/levels` | The same metrics per level, ordered by level | `200 [{ level, plays, completed, failed, quit, completionRate, averageScore, averageProgress, averageUnfinishedProgress, averageDurationMs }]` |
 | `GET /api/health` | Liveness | `200 { "status": "ok" }` |
+
+Rates and progress are 0–1. `averageUnfinishedProgress` averages progress over failed and quit plays only (how far players get when they don't finish); completed plays always reach 1. Averages and rates are `null` when there is nothing to average.
 
 Errors have the form `{ "error": { "code", "message", "issues"?: [{ "path", "message" }] } }`. Unexpected failures return a generic `500 internal_error`; stack traces stay in the server log.
 
@@ -157,6 +163,50 @@ Emulator data is in memory and cleared when the emulator stops.
 - `timestamp` comes from the player's clock and is not checked for plausibility; `receivedAt` is the trustworthy server time.
 - Delivery is best effort: batches sent while the backend is down are lost (no retries or offline buffer).
 
+## Analytics dashboard
+
+`dashboard/` is a React 19 + Vite app in its own workspace package. It runs on http://localhost:5174 (`pnpm dev:dashboard`, or `pnpm dev:all` for the whole stack) and reads only from the backend, through the same `/api` Vite proxy the game uses:
+
+- `GET /api/analytics/overview`
+- `GET /api/analytics/levels`
+
+It never talks to Firebase. A separate app keeps React, its config and its bundle out of the game: the game's Vite config, Famobi build and Pages deployment are untouched.
+
+### What it shows
+
+| Part | Question it answers | Form |
+| --- | --- | --- |
+| Completion rate (hero) with total plays | How many plays were there, and how many got through? | One large figure inside a sentence |
+| How plays ended | What share completed, failed or quit? | One 100% bar, with a legend giving count and share |
+| Which levels are hardest? | Which levels are easier or harder? | One row per level: completion rate as a figure, plus the same outcome bar |
+| How far do players get when they don't finish? | How far do unfinished runs get? How do length and score differ? | Table with a fruit-bar style meter of progress reached |
+
+Secondary averages (progress, play length, score) sit in a quiet strip under the overview instead of getting equal billing.
+
+### Why these choices
+
+- **Completion rate leads.** It is the one number that says whether players get through levels. Total plays gives it scale, and the outcome split explains it.
+- **Three fixed outcomes, three fixed colors.** Complete is snake green, fail is fruit pink (a crash) and quit is obstacle slate, a neutral color because leaving is not failing. They appear in the same order and color everywhere, and always with a text label, so color is never the only cue.
+- **A 100% bar instead of a donut.** Three parts of one whole read more precisely as lengths on one line. The same bar is reused per level, so the reader learns the encoding once.
+- **Completion rate defines difficulty.** Each level bar starts with "completed" at a shared left edge, so completion compares directly between levels. The rest of the bar tells why a level isn't being completed: mostly crashes points to difficulty, mostly quits points to disengagement. A one-line reading ("Level 3 is the hardest so far…") is derived from the same numbers, and levels with fewer than 5 plays are marked as small samples.
+- **Unfinished progress, not average progress.** Average progress mixes in completed plays (always 100%). Progress of failed and quit plays answers "how far do players get when they don't finish".
+- **Score is de-emphasized.** Score carries over between levels within a game, so later levels start higher and average score is not comparable across levels. The table footnote says so.
+
+### States
+
+- Loading.
+- Backend unavailable: explains how to start it and offers Try again.
+- No plays yet: "No gameplay sessions recorded yet. Play Neon Snake to generate analytics.", with no empty charts.
+- Populated.
+- A failed refresh keeps the last data on screen and says so in the status line.
+- Null aggregates render as "—".
+
+### Limitations
+
+- Values cover all finished plays since the emulator started; there is no time filtering because the API has no time series.
+- Data refreshes manually (Refresh button), not live.
+- On narrow screens the level table scrolls horizontally inside its own container, with its key column first.
+
 ## Project structure
 
 ```text
@@ -208,6 +258,16 @@ server/
 ├── firebase.json
 ├── firebase.test.json
 └── firestore.rules
+
+dashboard/
+└── src/
+    ├── api/            # fetch client and data hook
+    ├── components/     # Masthead, Overview, OutcomeBar, LevelDifficulty, LevelDetail, StatePanel
+    ├── App.tsx
+    ├── format.ts       # percentages, durations, scores
+    ├── insights.ts     # the derived level-difficulty sentence
+    ├── outcomes.ts     # fixed outcome order, labels and colors
+    └── styles.css
 ```
 
 The game simulation remains independent from Phaser. An application controller coordinates commands, persistence, audio, and domain events. The Phaser scene adapts simulation state into graphics and input, while the HUD and menus remain accessible DOM elements.
@@ -215,6 +275,21 @@ The game simulation remains independent from Phaser. An application controller c
 Player preferences, the best score, completed runs, and unlocked levels are saved locally. Audio is generated in the browser without external media files.
 
 The included workflow builds and deploys the game whenever the default branch is updated.
+
+## With more time...
+
+Given more time, I would focus on:
+
+- **Analytics reliability:** add a small retry/offline queue so events are not lost when the backend is temporarily unavailable.
+- **Scalable aggregation:** replace per-request aggregation over raw events with precomputed aggregates or an analytics-oriented store as data volume grows.
+- **Time-based analysis:** add time-range queries and trends once enough data exists to make them meaningful.
+- **Session analysis:** distinguish plays that genuinely remain active from sessions abandoned by closing the browser.
+- **Dashboard exploration:** add lightweight filtering and per-level drill-down once supported by the API, while keeping the overview focused.
+- **Production hardening:** add authentication/rate limiting, production Firebase configuration, monitoring, and appropriate deployment configuration.
+
+## Development tools
+
+AI-assisted development tools were used during the challenge to support implementation, testing, and code review. 
 
 ## License
 

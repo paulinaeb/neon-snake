@@ -1,5 +1,6 @@
 packages:
   - server
+  - dashboard
 allowBuilds:
   '@firebase/util': false
   esbuild: true

@@ -105,6 +105,7 @@ describe('Firestore Emulator persistence', () => {
       completionRate: 1 / 3,
       averageScore: 130 / 3,
       averageProgress: expect.closeTo(1.6 / 3, 10),
+      averageUnfinishedProgress: expect.closeTo(0.3, 10),
       averageDurationMs: 11000
     });
 
@@ -120,6 +121,7 @@ describe('Firestore Emulator persistence', () => {
         completionRate: 0.5,
         averageScore: 30,
         averageProgress: 0.6,
+        averageUnfinishedProgress: 0.2,
         averageDurationMs: 12000
       },
       {
@@ -131,6 +133,7 @@ describe('Firestore Emulator persistence', () => {
         completionRate: 0,
         averageScore: 70,
         averageProgress: 0.4,
+        averageUnfinishedProgress: 0.4,
         averageDurationMs: 9000
       }
     ]);
